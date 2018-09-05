@@ -1,4 +1,5 @@
 const net = require('net')
+
 const server = net.createServer(c => {
   console.log('Client connected')
   c.on('end', () => {
@@ -7,14 +8,14 @@ const server = net.createServer(c => {
   c.on('error', err => {
     throw Error(err)
   })
-  c.write('hello')
   c.on('data', (data) => {
     c.write(data)
+    c.end()
   })
 }).on('error', err => {
   console.log(err)
 })
 
-server.listen(80, () => {
+server.listen(3000, () => {
   console.log('server bound')
 })
