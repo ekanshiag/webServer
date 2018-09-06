@@ -1,5 +1,6 @@
 const net = require('net')
 let req = {}
+let res = {}
 
 const server = net.createServer(c => {
   console.log('Client connected')
@@ -28,8 +29,8 @@ const server = net.createServer(c => {
       headers = reqData.substring(0, headersEndIndex)
       parseHeaders(headers)
       if (req.method === 'GET') {
-        let res = getRequestHandler()
-        c.write(res)
+        getRequestHandler()
+        c.write(makeResponse())
         c.end()
       } else if (req.method === 'POST') {
         req.body = reqData.substring(headersEndIndex + 4)
@@ -50,8 +51,16 @@ server.listen(3000, () => {
 })
 
 function getRequestHandler () {
-  let res = 'GET request received\n'
-  return res
+  res.version = req.version
+  res.status = '200'
+  res.reason = 'OK'
+  res.headers = {}
+  if (Object.keys(req.headers).includes('Cache-Control')) {
+    res['Cache-Control'] = req['Cache-Control']
+  }
+  res.body = 'GET request recieved!\n'
+  res.headers['Content-Type'] = 'application/json'
+  res.headers['Content-Length'] = res.body.length.toString()
 }
 
 function postRequestHandler () {
@@ -85,4 +94,15 @@ function parseHeaders (headers) {
     requestHeaders[header.shift()] = header.join(':').trim()
   })
   req.headers = requestHeaders
+}
+
+function makeResponse () {
+  let resData = res.version + ' ' + res.status + ' ' + res.reason + '\r\n'
+  for (let header in res.headers) {
+    let headerLine = ''
+    headerLine = header + ': ' + res.headers[header]
+    resData += headerLine + '\r\n'
+  }
+  resData += '\r\n' + res.body
+  return resData
 }
