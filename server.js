@@ -33,8 +33,10 @@ const server = net.createServer(c => {
         c.write(makeResponse())
         c.end()
       } else if (req.method === 'POST') {
-        req.body = reqData.substring(headersEndIndex + 4)
-        verifyBodyLength(c)
+        if (verifyLengthHeader(c)) {
+          req.body = reqData.substring(headersEndIndex + 4)
+          verifyBodyLength(c)
+        }
       } else {
         console.log(req)
         res.version = req.version
@@ -147,4 +149,21 @@ function makeResponse () {
   resData += '\r\n' + res.body
   res = {}
   return resData
+}
+
+function verifyLengthHeader (c) {
+  if (!Object.keys(req.headers).includes('Content-Length')) {
+    res.status = '411'
+    res.reason = 'Length Required'
+    res.headers = {}
+    if (Object.keys(req.headers).includes('Cache-Control')) {
+      res['Cache-Control'] = req['Cache-Control']
+    }
+    res.body = 'Bad POST request recieved!\n'
+    res.headers['Content-Type'] = 'application/json'
+    res.headers['Content-Length'] = res.body.length.toString()
+    c.write(makeResponse())
+    c.end()
+    return 0
+  } else return 1
 }
