@@ -1,12 +1,13 @@
 const net = require('net')
-let requestLine = ''
-let headers = ''
-let body = ''
+let req = {}
 
 const server = net.createServer(c => {
   console.log('Client connected')
-  let req = ''
+  let reqData = ''
   let getBody = 0
+  let requestLine = ''
+  let headers = ''
+
   c.on('end', () => {
     console.log('Client connection ended')
   })
@@ -14,25 +15,31 @@ const server = net.createServer(c => {
     throw Error(err)
   })
   c.on('data', (data) => {
-    req = req.concat(data.toString())
-    if (getBody === 0 && req.includes('\r\n\r\n')) {
-      let requestLineEndIndex = req.indexOf('\r\n')
-      requestLine = req.substring(0, requestLineEndIndex)
-      req = req.substring(requestLineEndIndex + 2)
-      let headersEndIndex = req.indexOf('\r\n\r\n')
-      headers = req.substring(0, headersEndIndex)
-      console.log(headers, '\n\n')
-      if (requestLine.startsWith('GET')) {
+    reqData = reqData.concat(data.toString())
+    if (getBody === 0 && reqData.includes('\r\n\r\n')) {
+      let requestLineEndIndex = reqData.indexOf('\r\n')
+      requestLine = reqData.substring(0, requestLineEndIndex)
+      requestLine = requestLine.split(' ')
+      // [req.method, req.uri, req.version] = requestLine
+      req.method = requestLine.shift()
+      req.uri = requestLine.shift()
+      req.version = requestLine.shift()
+      reqData = reqData.substring(requestLineEndIndex + 2)
+      let headersEndIndex = reqData.indexOf('\r\n\r\n')
+      headers = reqData.substring(0, headersEndIndex)
+      parseHeaders(headers)
+      console.log(req)
+      if (req.method === 'GET') {
         let res = getRequestHandler()
         c.write(res)
         c.end()
-      } else if (requestLine.startsWith('POST')) {
-        body = req.substring(headersEndIndex + 4)
-        req = ''
+      } else if (req.method === 'POST') {
+        req.body = reqData.substring(headersEndIndex + 4)
+        reqData = ''
         getBody = 1
       }
     } else if (getBody === 1) {
-      body = body.concat(req)
+      req.body = req.body.concat(reqData)
     }
   })
 }).on('error', err => {
@@ -56,5 +63,13 @@ function postRequestHandler (req) {
 }
 
 function verifyBodyLength () {
-  
+
+}
+
+function parseHeaders (headers) {
+  headers = headers.split('\r\n')
+  headers.forEach(header => {
+    header = header.split(':')
+    req[header.shift()] = header.join(':').trim()
+  })
 }
