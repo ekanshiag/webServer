@@ -35,6 +35,17 @@ const server = net.createServer(c => {
       } else if (req.method === 'POST') {
         req.body = reqData.substring(headersEndIndex + 4)
         verifyBodyLength(c)
+      } else {
+        console.log(req)
+        res.version = req.version
+        res.status = '501'
+        res.reason = 'Not Implemented'
+        res.headers = {}
+        res.body = 'Unsupported request recieved!\n'
+        res.headers['Content-Type'] = 'application/json'
+        res.headers['Content-Length'] = res.body.length.toString()
+        c.write(makeResponse())
+        c.end()
       }
     } else if (getBody === 1) {
       req.body = req.body.concat(reqData)
@@ -61,6 +72,7 @@ function getRequestHandler () {
   res.body = 'GET request recieved!\n'
   res.headers['Content-Type'] = 'application/json'
   res.headers['Content-Length'] = res.body.length.toString()
+  res.headers['Access-Control-Allow-Origin'] = '*'
 }
 
 function postRequestHandler () {
@@ -75,6 +87,7 @@ function postRequestHandler () {
   res.body = 'POST request recieved!\n'
   res.headers['Content-Type'] = 'application/json'
   res.headers['Content-Length'] = res.body.length.toString()
+  res.headers['Access-Control-Allow-Origin'] = '*'
 }
 
 function verifyBodyLength (c) {
