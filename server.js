@@ -104,5 +104,6 @@ function makeResponse () {
     resData += headerLine + '\r\n'
   }
   resData += '\r\n' + res.body
+  res = {}
   return resData
 }
