@@ -65,22 +65,50 @@ function getRequestHandler () {
 
 function postRequestHandler () {
   console.log(req.body)
-  let res = 'POST request received\n'
-  return res
+  res.version = req.version
+  res.status = '200'
+  res.reason = 'OK'
+  res.headers = {}
+  if (Object.keys(req.headers).includes('Cache-Control')) {
+    res['Cache-Control'] = req['Cache-Control']
+  }
+  res.body = 'POST request recieved!\n'
+  res.headers['Content-Type'] = 'application/json'
+  res.headers['Content-Length'] = res.body.length.toString()
 }
 
 function verifyBodyLength (c) {
   if (req.body.length === Number(req.headers['Content-Length'])) {
-    let res = postRequestHandler()
-    c.write(res)
+    postRequestHandler()
+    c.write(makeResponse())
     c.end()
   } else if (req.body.length > Number(req.headers['Content-Length'])) {
-    c.write('Invalid request')
+    res.version = req.version
+    res.status = '400'
+    res.reason = 'Bad Request'
+    res.headers = {}
+    if (Object.keys(req.headers).includes('Cache-Control')) {
+      res['Cache-Control'] = req['Cache-Control']
+    }
+    res.body = 'Bad POST request recieved!\n'
+    res.headers['Content-Type'] = 'application/json'
+    res.headers['Content-Length'] = res.body.length.toString()
+    c.write(makeResponse())
     c.end()
   } else {
     c.setTimeout(3000)
     c.on('timeout', () => {
-      c.write('Incomplete request')
+      res.version = req.version
+      res.status = '206'
+      res.reason = 'Partial Content'
+      res.headers = {}
+      if (Object.keys(req.headers).includes('Cache-Control')) {
+        res['Cache-Control'] = req['Cache-Control']
+      }
+      res.body = 'Incomplete POST request recieved!\n'
+      res.headers['Content-Type'] = 'application/json'
+      res.headers['Content-Length'] = res.body.length.toString()
+      c.write(makeResponse())
       c.end()
     })
   }
