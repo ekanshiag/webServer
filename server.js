@@ -111,7 +111,7 @@ function initialiseResponseObject () {
   for (let header in req.headers) {
     res.headers[header] = req.headers[header]
   }
-  res.headers['Content-Type'] = 'application/json'
+  res.headers['Content-Type'] = 'text/plain'
   res.headers['Content-Length'] = res.body.length.toString()
 }
 
@@ -132,14 +132,7 @@ function verifyLengthHeader (c) {
   if (!Object.keys(req.headers).includes('Content-Length')) {
     res.status = '411'
     res.reason = 'Length Required'
-    res.headers = {}
-    if (Object.keys(req.headers).includes('Cache-Control')) {
-      res['Cache-Control'] = req['Cache-Control']
-    }
     res.body = 'Bad POST request recieved!\n'
-    res.headers['Content-Type'] = 'application/json'
-    res.headers['Content-Length'] = res.body.length.toString()
-    res.headers['Access-Control-Allow-Origin'] = '*'
     c.write(makeResponse())
     c.end()
     return 0
