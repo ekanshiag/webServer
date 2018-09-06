@@ -20,7 +20,6 @@ const server = net.createServer(c => {
       let requestLineEndIndex = reqData.indexOf('\r\n')
       requestLine = reqData.substring(0, requestLineEndIndex)
       requestLine = requestLine.split(' ')
-      // [req.method, req.uri, req.version] = requestLine
       req.method = requestLine.shift()
       req.uri = requestLine.shift()
       req.version = requestLine.shift()
@@ -28,18 +27,18 @@ const server = net.createServer(c => {
       let headersEndIndex = reqData.indexOf('\r\n\r\n')
       headers = reqData.substring(0, headersEndIndex)
       parseHeaders(headers)
-      console.log(req)
       if (req.method === 'GET') {
         let res = getRequestHandler()
         c.write(res)
         c.end()
       } else if (req.method === 'POST') {
         req.body = reqData.substring(headersEndIndex + 4)
-        reqData = ''
-        getBody = 1
+        verifyBodyLength(c)
       }
     } else if (getBody === 1) {
       req.body = req.body.concat(reqData)
+      reqData = ''
+      verifyBodyLength(c)
     }
   })
 }).on('error', err => {
@@ -55,15 +54,27 @@ function getRequestHandler () {
   return res
 }
 
-function postRequestHandler (req) {
-  let data = req.split('\r\n').pop()
-  console.log(data)
-  console.log(data.length)
-  return req
+function postRequestHandler () {
+  console.log(req.body)
+  let res = 'POST request received\n'
+  return res
 }
 
-function verifyBodyLength () {
-
+function verifyBodyLength (c) {
+  if (req.body.length === Number(req.headers['Content-Length'])) {
+    let res = postRequestHandler()
+    c.write(res)
+    c.end()
+  } else if (req.body.length > Number(req.headers['Content-Length'])) {
+    c.write('Invalid request')
+    c.end()
+  } else {
+    c.setTimeout(3000)
+    c.on('timeout', () => {
+      c.write('Incomplete request')
+      c.end()
+    })
+  }
 }
 
 function parseHeaders (headers) {
