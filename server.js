@@ -67,9 +67,11 @@ function verifyBodyLength () {
 }
 
 function parseHeaders (headers) {
+  let requestHeaders = {}
   headers = headers.split('\r\n')
   headers.forEach(header => {
     header = header.split(':')
-    req[header.shift()] = header.join(':').trim()
+    requestHeaders[header.shift()] = header.join(':').trim()
   })
+  req.headers = requestHeaders
 }
