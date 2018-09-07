@@ -149,5 +149,10 @@ function parseJSON () {
 }
 
 function parseUrlEncoded () {
-  
+  let args = req.body.split('&')
+  req.body = {}
+  args.forEach(i => {
+    i = i.split('=')
+    req.body[i[0]] = i[1]
+  })
 }
