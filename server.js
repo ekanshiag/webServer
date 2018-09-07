@@ -66,6 +66,11 @@ function getRequestHandler () {
 }
 
 function postRequestHandler () {
+  if (req.headers['Content-Type'] === 'application/json') {
+    parseJSON()
+  } else {
+    parseUrlEncoded()
+  }
   console.log(req.body)
   res.status = '200'
   res.reason = 'OK'
@@ -137,4 +142,12 @@ function verifyLengthHeader (c) {
     c.end()
     return 0
   } else return 1
+}
+
+function parseJSON () {
+  req.body = JSON.parse(req.body)
+}
+
+function parseUrlEncoded () {
+  
 }
