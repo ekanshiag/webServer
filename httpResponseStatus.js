@@ -1,4 +1,4 @@
-export const httpStatus = {
+const httpStatus = {
   '100': 'Continue',
   '101': 'Switching Protocol',
   '200': 'OK',
@@ -63,7 +63,7 @@ export const httpStatus = {
   '599': 'Network Connect Timeout Error'
 }
 
-export const httpMimeTypes = {
+const httpMimeTypes = {
   'plain': 'text/plain',
   'html': 'text/html',
   'jpeg': 'image/jpeg',
@@ -71,3 +71,8 @@ export const httpMimeTypes = {
   'json': 'application/json',
   'js': 'application/javascript'
 }
+
+module.exports = [
+  httpStatus,
+  httpMimeTypes
+]
