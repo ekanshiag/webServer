@@ -21,32 +21,39 @@ function createServer (port) {
 
 async function runServer (client) {
   let req = Object.create(request)
-  let i = await getRequest(client)
-  console.log(i.next())
-  req = await i.next().value
-  console.log(req)
-  if (wantBody(await req)) {
+  let i = getRequest(client)
+  let r = await i.next()
+  req = r.value
+  if (wantBody(req)) {
     req.body = !checkContentLenHeader(req)
       ? closeConnection(client, '411')
-      : verifyAndGetBody(req, i)
+      : await verifyAndGetBody(req, i,client)
   }
-  createResponseAndRunHandlers(req)
+  //createResponseAndRunHandlers(req)
+  client.write(JSON.stringify(req))
+  client.end()
 }
 
 async function* getRequest (client) {
   let dataBuffer = Buffer.from([])
-  client.on('data', c => {
-    console.log(c)
-    dataBuffer += c
+  let gotHeaders = 0
+  let resolveHead, resolveBody
+  function parseHeaders () {
+    if(gotHeaders === 1) return
     if (checkForHeaders(dataBuffer)) {
-      yield await getHeaders(dataBuffer).shift()
+      let req = {}
+      let result = getHeaders(req, dataBuffer)
       let headersEnd = dataBuffer.indexOf('\r\n\r\n')
       dataBuffer = dataBuffer.slice(headersEnd + 4)
-      while(1) yield dataBuffer
+      resolveHead(result.shift())
     }
+  }
+  client.on('data', c => {
+    dataBuffer = Buffer.concat([dataBuffer, c], (dataBuffer.length + c.length))
+    parseHeaders()
   })
-  //console.log(dataBuffer.toString())
-    
+    yield await new Promise(r => resolveHead = r)
+    while(1) yield dataBuffer
 }
 
 function checkForHeaders (buffer) { return buffer.toString().includes('\r\n\r\n') }
@@ -61,8 +68,10 @@ function checkBodyLength (req, buffer) {
       : -1
 }
 
-function verifyAndGetBody (req, i, client) {
-  let buffer = i.next().value
+async function verifyAndGetBody (req, i, client) {
+  let buffer = await i.next()
+  buffer = buffer.value
+  console.log(buffer.toString())
   switch (checkBodyLength(req, buffer)) {
     case 0: return parseBody(req, buffer)
     case 1: closeConnection(client, '413')
@@ -114,6 +123,7 @@ function separateHeaders (req, buffer) { return [req, buffer.slice(0, buffer.ind
 
 function parseHeaders (req, buffer) {
   let headers = splitLines(buffer.toString(), '\r\n')
+  req.headers = {}
   for (let header of headers) {
     let x = splitLines(header, ':')
     req.headers[x.shift()] = x.join(':').trim()
@@ -136,28 +146,6 @@ function pipe (...fns) {
 }
 
 let getHeaders = pipe(parseReqLine, separateHeaders, normaliseHeaders, parseHeaders)
-let dataBuffer = Buffer.from([])
-let getBody = 0
-
-function handleConnection (req, datachunk, client) {
-  dataBuffer += datachunk
-  if (checkForHeaders(dataBuffer) && getBody === 0) {
-    [req, buff] = getHeaders(req, dataBuffer)
-    if (wantBody(req)) {
-      let headersEnd = dataBuffer.indexOf('\r\n\r\n')
-      dataBuffer = dataBuffer.slice(headersEnd + 4)
-      getBody = 1
-    } else {
-      createResponseAndRunHandlers(req)
-    }
-  }
-  if (getBody === 1) {
-    checkContentLenHeader(req)
-      ? verifyAndGetBody(req, dataBuffer, client)
-      : closeConnection(client, '411')
-  }
-  console.log(req)
-}
 
 function createResponseAndRunHandlers (req) {
   let res = Object.create(response)
@@ -189,9 +177,9 @@ function methodHandler (req, res) {
 }
 
 module.exports = [
-  setUpConnection,
+  createServer,
   addHandler,
   addRoute
 ]
 
-createServer()
+createServer(3000)
