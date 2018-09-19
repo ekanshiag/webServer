@@ -29,9 +29,7 @@ async function runServer (client) {
       ? closeConnection(client, '411')
       : await verifyAndGetBody(req, i,client)
   }
-  //createResponseAndRunHandlers(req)
-  client.write(JSON.stringify(req))
-  client.end()
+  createResponseAndRunHandlers(req)
 }
 
 async function* getRequest (client) {
@@ -172,6 +170,8 @@ function methodHandler (req, res) {
       if (!routes[method].includes(req.uri)) {
         closeConnection('400')
       }
+      client.write(JSON.stringify(res))
+      client.end()      
     }
   })
 }

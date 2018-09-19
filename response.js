@@ -18,7 +18,7 @@ res.setStatus = function (newStatus) {
 }
 
 res.setContentType = function (type) {
-  this.res.headers['Content-Type'] = mimeType[type]
+  this.headers['Content-Type'] = mimeType[type]
 }
 
 res.getResponseStr = function () {
@@ -31,10 +31,10 @@ res.getResponseStr = function () {
 }
 
 res.send = function (body) {
-  res.socket.write(JSON.stringify(body))
-  res.socket.end()
+  this.socket.write(JSON.stringify(body))
+  this.socket.end()
 }
 
 res.addHeaders = function (headers) {
-  this.res.headers = headers
+  this.headers = headers
 }
