@@ -3,8 +3,8 @@ let request = require('./request')
 let response = require('./response')
 let handlers = [methodHandler]
 let routes = {
-  'GET': [],
-  'POST': []
+  'GET': {},
+  'POST': {}
 }
 let methods = ['GET', 'POST']
 
@@ -29,7 +29,7 @@ async function runServer (client) {
       ? closeConnection(client, '411')
       : await verifyAndGetBody(req, i,client)
   }
-  createResponseAndRunHandlers(req)
+  createResponseAndRunHandlers(req, client)
 }
 
 async function* getRequest (client) {
@@ -70,7 +70,6 @@ function checkBodyLength (req, buffer) {
 async function verifyAndGetBody (req, i, client) {
   let buffer = await i.next()
   buffer = buffer.value
-  console.log(buffer.toString())
   switch (checkBodyLength(req, buffer)) {
     case 0: return parseBody(req, buffer)
     case 1: closeConnection(client, '413')
@@ -81,7 +80,7 @@ async function verifyAndGetBody (req, i, client) {
 }
 
 function closeConnection (client, status) {
-  client.write('Closing connection with status ' + status)
+  client.write('Closing connection with status ' + status +'\n')
   client.end()
 }
 
@@ -146,9 +145,11 @@ function pipe (...fns) {
 
 let getHeaders = pipe(parseReqLine, separateHeaders, normaliseHeaders, parseHeaders)
 
-function createResponseAndRunHandlers (req) {
+function createResponseAndRunHandlers (req, client) {
+  console.log('running handlers')
   let res = Object.create(response)
   res.addHeaders(req.headers)
+  res.socket = client
   next(req, res)
 }
 
@@ -161,20 +162,21 @@ function addHandler (handler) {
   handlers.push(handler)
 }
 
-function addRoute (method, route) {
-  routes[method].push(route)
+function addRoute (method, route, handler) {
+  routes[method][route] = handler
 }
 
 function methodHandler (req, res) {
   methods.forEach(method => {
     if (req.method === method) {
-      if (!routes[method].includes(req.uri)) {
-        closeConnection('400')
+      if (!routes[method].hasOwnProperty(req.uri)) {
+        closeConnection(res.socket, '400')
       }
-      client.write(JSON.stringify(res))
-      client.end()      
+      addHandler(routes[method][req.uri])
+      next(req, res)    
     }
   })
+  closeConnection(res.socket, '405')
 }
 
 module.exports = [

@@ -31,6 +31,7 @@ res.getResponseStr = function () {
 }
 
 res.send = function (body) {
+  console.log(this.socket)
   this.socket.write(JSON.stringify(body))
   this.socket.end()
 }
