@@ -37,7 +37,6 @@ async function* getRequest (client) {
   let gotHeaders = 0
   let resolveHead, resolveBody
   function parseHeaders () {
-    if(gotHeaders === 1) return
     if (checkForHeaders(dataBuffer)) {
       let req = {}
       let result = getHeaders(req, dataBuffer)
@@ -48,10 +47,12 @@ async function* getRequest (client) {
   }
   client.on('data', c => {
     dataBuffer = Buffer.concat([dataBuffer, c], (dataBuffer.length + c.length))
-    parseHeaders()
+    if(gotHeaders === 0) parseHeaders()
+    else resolveBody(dataBuffer)
   })
     yield await new Promise(r => resolveHead = r)
-    while(1) yield dataBuffer
+    yield dataBuffer
+    while(1) yield new Promise(r => resolveBody = r)
 }
 
 function checkForHeaders (buffer) { return buffer.toString().includes('\r\n\r\n') }
