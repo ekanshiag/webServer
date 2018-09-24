@@ -1,16 +1,20 @@
 const net = require('net')
+const path = require('path')
+const fs = require('fs')
 let request = require('./request')
 let response = require('./response')
-let handlers = [methodHandler]
+let handlers = []
 let routes = {
   'GET': {},
   'POST': {}
 }
 let methods = ['GET', 'POST']
+let staticFilesDir
 
 function createServer (port) {
   const server = net.createServer(client => {
     console.log('Client connected')
+    addHandler(methodHandler)
     runServer(client)
     client.on('error', err => console.error(err))
     client.on('end', () => console.log('Client connection ended'))
@@ -179,9 +183,33 @@ function methodHandler (req, res) {
   closeConnection(res.socket, '405')
 }
 
+function addStaticHandler (dir) {
+  staticFilesDir = dir
+  handlers.push(staticFileHandler)
+}
+
+function staticFileHandler (req, res) {
+  fs.readdir(staticFilesDir, (err, files) => {
+    if (err) {
+      closeConnection(res.socket, '400')
+    }
+    files.forEach(file => {
+      addRoute('GET', `/${file}`, (req, res) => {
+        res.setContentType(path.extname(file).slice(1))
+        fs.readFile(path.join(staticFilesDir,file), (err,data) => {
+          if (err) closeConnection(res.socket, '500')
+          res.body = data
+          res.send()
+        })
+      })
+    })
+  })
+}
+
 module.exports = [
   createServer,
   addHandler,
+  addStaticHandler,
   addRoute
 ]
 
